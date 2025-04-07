@@ -5,7 +5,7 @@ import supervisor
 
 # Define the 16 GPIO pins (GP1 through GP16 as specified)
 pins = [
-    board.GP1, board.GP2, board.GP3, board.GP4, 
+    board.GP1, board.GP2, board.GP3, board.GP4,
     board.GP5, board.GP6, board.GP7, board.GP8,
     board.GP9, board.GP10, board.GP11, board.GP12,
     board.GP13, board.GP14, board.GP15, board.GP16
@@ -82,6 +82,7 @@ key_list = [
     "KEY_PERIOD",
     "KEY_COMMA",
     "KEY_SEMICOLON",
+    "KEY_QUOTE",
     "KEY_ENTER",
     "KEY_LEFT_BRACE",
     "KEY_RIGHT_BRACE",
@@ -94,25 +95,25 @@ key_list = [
 def detect_key_connection():
     """Detect which pins are connected when a key is pressed"""
     connections = []
-    
+
     # Test each pin as an output
     for i in range(16):
         # Reset all pins
         reset_pins()
-        
+
         # Set current pin as output HIGH
         io_pins[i].direction = digitalio.Direction.OUTPUT
         io_pins[i].value = True
-        
+
         # Check all other pins as inputs
         for j in range(16):
             if i != j and io_pins[j].value:
                 # A key is pressed connecting output i to input j
                 connections.append((i, j))
-        
+
         # Reset pin after testing
         reset_pins()
-    
+
     return connections
 
 def map_keyboard():
@@ -123,47 +124,47 @@ def map_keyboard():
     print("Type 'x' and press Enter at any time to skip the current key.")
     print("For modifier keys like Fn, the connection will be stored for later use.")
     print("Press Enter again after a key is detected to continue.\n")
-    
+
     # Store the mapping results
     key_mapping = {}
     row_pins = set()
     col_pins = set()
-    
+
     # Special storage for modifier keys
     modifier_connections = {}
-    
+
     # Map each key in the list
     for idx, key_name in enumerate(key_list):
         print(f"Press key: {key_name} (Key {idx+1}/{len(key_list)})")
         print("  (Press and hold key, then press Enter to detect)")
         print("  (Or type 'x' and press Enter to skip this key)")
-        
+
         # Wait for user input
         response = input().strip().lower()
-        
+
         if response == 'x':
             print(f"  Skipping {key_name}")
             continue
-        
+
         # User pressed Enter, detect the key
         print("  Detecting key...")
         connections = detect_key_connection()
-        
+
         if connections:
             # Filter out bidirectional connections
             filtered_connections = filter_bidirectional_connections(connections)
-            
+
             print(f"  Detected {len(filtered_connections)} connections:")
             for i, conn in enumerate(filtered_connections):
                 print(f"    {i+1}. GP{conn[0]+1} -> GP{conn[1]+1}")
-            
+
             # If this is a modifier key, store its connection
             if key_name.startswith("MODIFIERKEY_"):
                 if filtered_connections:
                     # Store this modifier for later reference
                     modifier_connections[key_name] = filtered_connections[0]
                     print(f"  Stored {key_name} connection for reference with other keys")
-                
+
             # Let user select which connection to use if multiple are detected
             if len(filtered_connections) > 1:
                 # Print info about which modifiers might be active
@@ -172,7 +173,7 @@ def map_keyboard():
                     for mod_name, mod_conn in modifier_connections.items():
                         print(f"    - {mod_name}: GP{mod_conn[0]+1} -> GP{mod_conn[1]+1}")
                     print("  If you're pressing a modifier, its connection should appear above.")
-                
+
                 # Ask user to select which connection to use
                 print("  Multiple connections detected. Which one should be used for this key?")
                 valid_selection = False
@@ -200,14 +201,14 @@ def map_keyboard():
                     # Try again with this key
                     idx -= 1
                     continue
-            
+
             # Store the selected connection
             key_mapping[key_name] = conn
-            
+
             # Track which pins are used as rows/columns
             row_pins.add(conn[0])
             col_pins.add(conn[1])
-            
+
             # Continue to next key
             print("  Press Enter to continue to next key...")
             input()
@@ -221,40 +222,40 @@ def map_keyboard():
                 # Try again with this key
                 idx -= 1
                 continue
-    
+
     # Analyze results and generate QMK mapping
     print("\nMapping complete! Analyzing results...\n")
-    
+
     # Sort rows and columns for consistent display
     rows = sorted(list(row_pins))
     cols = sorted(list(col_pins))
-    
+
     # Print summary of mapped keys
     print("===== MAPPING SUMMARY =====")
     print(f"Total keys mapped: {len(key_mapping)}")
     print(f"Matrix dimensions: {len(rows)} rows × {len(cols)} columns")
-    
+
     # Create a matrix to visualize the keyboard layout
     matrix = [[None for _ in range(len(cols))] for _ in range(len(rows))]
-    
+
     # Fill the matrix with key names
     for key_name, (row_pin, col_pin) in key_mapping.items():
         if row_pin in rows and col_pin in cols:
             row_idx = rows.index(row_pin)
             col_idx = cols.index(col_pin)
             matrix[row_idx][col_idx] = key_name
-    
+
     # Generate a CSV summary of the mapping
     print("\nMatrix CSV (for spreadsheet reference):")
     header = "," + ",".join([f"COL{i} (GP{cols[i]+1})" for i in range(len(cols))])
     print(header)
-    
+
     for i, row in enumerate(matrix):
         row_values = []
         for key in row:
             row_values.append(key if key else "")
         print(f"ROW{i} (GP{rows[i]+1})," + ",".join(row_values))
-    
+
     # Print which keys were mapped
     print("\nSuccessfully mapped keys:")
     for key_name in sorted(key_mapping.keys()):
@@ -262,20 +263,20 @@ def map_keyboard():
         row_idx = rows.index(row_pin)
         col_idx = cols.index(col_pin)
         print(f"  - {key_name}: [Row {row_idx}, Col {col_idx}] (GP{row_pin+1} -> GP{col_pin+1})")
-    
+
     # Print which keys were skipped
     skipped_keys = [key for key in key_list if key not in key_mapping]
     if skipped_keys:
         print("\nSkipped keys:")
         for key_name in skipped_keys:
             print(f"  - {key_name}")
-    
+
     # Save the mapping to a file
     try:
         with open("keyboard_mapping.txt", "w") as f:
             f.write("===== KEYBOARD MATRIX MAPPING =====\n\n")
             f.write(f"Matrix dimensions: {len(rows)} rows × {len(cols)} columns\n\n")
-            
+
             f.write("QMK Matrix Definition:\n")
             f.write("```c\n")
             f.write(f"#define MATRIX_ROWS {len(rows)}\n")
@@ -283,7 +284,7 @@ def map_keyboard():
             f.write("#define MATRIX_ROW_PINS { " + ", ".join([f"GP{r+1}" for r in rows]) + " }\n")
             f.write("#define MATRIX_COL_PINS { " + ", ".join([f"GP{c+1}" for c in cols]) + " }\n")
             f.write("```\n\n")
-            
+
             f.write("Key mapping:\n")
             f.write("```c\n")
             for key_name in sorted(key_mapping.keys()):
@@ -292,7 +293,7 @@ def map_keyboard():
                 col_idx = cols.index(col_pin)
                 f.write(f"#define {key_name} KEYMAP_POSITION({row_idx}, {col_idx})  // GP{row_pin+1} -> GP{col_pin+1}\n")
             f.write("```\n")
-        
+
         print("\nMatrix mapping saved to 'keyboard_mapping.txt'")
     except Exception as e:
         print(f"\nCould not save mapping to file: {e}")
@@ -301,25 +302,25 @@ def filter_bidirectional_connections(connections):
     """Filter out bidirectional connections to avoid duplicates"""
     filtered = []
     seen = set()
-    
+
     for conn in connections:
         # Check if the reverse connection has already been seen
         reverse_conn = (conn[1], conn[0])
         if reverse_conn not in seen:
             filtered.append(conn)
             seen.add(conn)
-    
+
     return filtered
-    
+
     # Determine row and column pins
     rows = sorted(list(row_pins))
     cols = sorted(list(col_pins))
-    
+
     # Print detected matrix dimensions
     print(f"Detected matrix: {len(rows)} rows × {len(cols)} columns")
     print(f"Row pins: {['GP'+str(r+1) for r in rows]}")
     print(f"Column pins: {['GP'+str(c+1) for c in cols]}")
-    
+
     # Generate QMK definitions
     print("\nQMK Matrix Definition:")
     print("```c")
@@ -331,7 +332,7 @@ def filter_bidirectional_connections(connections):
     print("#define MATRIX_ROW_PINS { " + ", ".join([f"GP{r+1}" for r in rows]) + " }")
     print("#define MATRIX_COL_PINS { " + ", ".join([f"GP{c+1}" for c in cols]) + " }")
     print("```")
-    
+
     # Generate keymap positions - using the exact key names provided
     print("\nKeymap Positions:")
     print("```c")
@@ -341,36 +342,36 @@ def filter_bidirectional_connections(connections):
         col_idx = cols.index(col_pin)
         print(f"#define {key_name} KEYMAP_POSITION({row_idx}, {col_idx})")
     print("```")
-    
+
     # Generate visual matrix
     print("\nVisual Matrix Layout:")
     matrix = [["." for _ in range(len(cols))] for _ in range(len(rows))]
-    
+
     for key_name, (row_pin, col_pin) in key_mapping.items():
         row_idx = rows.index(row_pin)
         col_idx = cols.index(col_pin)
         matrix[row_idx][col_idx] = "X"
-    
+
     # Print header
     header = "    " + " ".join([f"C{i}" for i in range(len(cols))])
     print(header)
-    
+
     # Print each row
     for i, row in enumerate(matrix):
         print(f"R{i}  " + " ".join(row))
-    
+
     # Generate key layout for keymap.c - using the exact key names
     print("\nSample keymap.c layout:")
     print("```c")
     print("[0] = LAYOUT(")
-    
+
     # Create matrix of key names
     key_matrix = [[None for _ in range(len(cols))] for _ in range(len(rows))]
     for key_name, (row_pin, col_pin) in key_mapping.items():
         row_idx = rows.index(row_pin)
         col_idx = cols.index(col_pin)
         key_matrix[row_idx][col_idx] = key_name
-    
+
     # Print rows
     for i, row in enumerate(key_matrix):
         row_str = "    "
@@ -381,11 +382,11 @@ def filter_bidirectional_connections(connections):
                 row_str += qmk_key
             else:
                 row_str += "KC_NO"
-                
+
             if i < len(key_matrix) - 1 or j < len(row) - 1:
                 row_str += ", "
         print(row_str)
-    
+
     print(")")
     print("```")
 
