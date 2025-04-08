@@ -271,32 +271,26 @@ def map_keyboard():
         for key_name in skipped_keys:
             print(f"  - {key_name}")
 
-    # Save the mapping to a file
-    try:
-        with open("keyboard_mapping.txt", "w") as f:
-            f.write("===== KEYBOARD MATRIX MAPPING =====\n\n")
-            f.write(f"Matrix dimensions: {len(rows)} rows × {len(cols)} columns\n\n")
+    # Print a mapping file
+    print("===== KEYBOARD MATRIX MAPPING =====\n\n")
+    print(f"Matrix dimensions: {len(rows)} rows × {len(cols)} columns\n\n")
 
-            f.write("QMK Matrix Definition:\n")
-            f.write("```c\n")
-            f.write(f"#define MATRIX_ROWS {len(rows)}\n")
-            f.write(f"#define MATRIX_COLS {len(cols)}\n\n")
-            f.write("#define MATRIX_ROW_PINS { " + ", ".join([f"GP{r+1}" for r in rows]) + " }\n")
-            f.write("#define MATRIX_COL_PINS { " + ", ".join([f"GP{c+1}" for c in cols]) + " }\n")
-            f.write("```\n\n")
+    print("QMK Matrix Definition:\n")
+    print("```c\n")
+    print(f"#define MATRIX_ROWS {len(rows)}\n")
+    print(f"#define MATRIX_COLS {len(cols)}\n\n")
+    print("#define MATRIX_ROW_PINS { " + ", ".join([f"GP{r+1}" for r in rows]) + " }\n")
+    print("#define MATRIX_COL_PINS { " + ", ".join([f"GP{c+1}" for c in cols]) + " }\n")
+    print("```\n\n")
 
-            f.write("Key mapping:\n")
-            f.write("```c\n")
-            for key_name in sorted(key_mapping.keys()):
-                row_pin, col_pin = key_mapping[key_name]
-                row_idx = rows.index(row_pin)
-                col_idx = cols.index(col_pin)
-                f.write(f"#define {key_name} KEYMAP_POSITION({row_idx}, {col_idx})  // GP{row_pin+1} -> GP{col_pin+1}\n")
-            f.write("```\n")
-
-        print("\nMatrix mapping saved to 'keyboard_mapping.txt'")
-    except Exception as e:
-        print(f"\nCould not save mapping to file: {e}")
+    print("Key mapping:\n")
+    print("```c\n")
+    for key_name in sorted(key_mapping.keys()):
+        row_pin, col_pin = key_mapping[key_name]
+        row_idx = rows.index(row_pin)
+        col_idx = cols.index(col_pin)
+        print(f"#define {key_name} KEYMAP_POSITION({row_idx}, {col_idx})  // GP{row_pin+1} -> GP{col_pin+1}\n")
+    print("```\n")
 
 def filter_bidirectional_connections(connections):
     """Filter out bidirectional connections to avoid duplicates"""
