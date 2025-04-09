@@ -64,10 +64,22 @@ keymap = [None,Keycode.DELETE,Keycode.TAB,Keycode.ZERO,Keycode.S,Keycode.F,Keyco
 # Handle special case CAPS_LOCK toggle -> LED? Would be cool.
 # Use the SSD1306 OLED?
 
+def ProcessFunctionKey(key):
+    print("Processing Fn")
+    if(key == Keycode.ONE):
+        print("F1")
+        return Keycode.F1
+    elif(key == Keycode.TWO):
+        return Keycode.F2
+    else:
+        print("BASIC")
+        return key
+            
 #main loop
 while True:
     keypressed = False
     mod_keypressed = False
+    mod_key = None
     for m_e in modifier_enable:
         m_e.value=1 #set the modifier pin to high
     for r in rows: #for each row
@@ -77,13 +89,24 @@ while True:
                 key = rows.index(r) * 8 + columns.index(c) #identify the key pressed via the index of the current row (r) and column (c)
                 if mod_keymap[key] is not None:
                     mod_keypressed = True
-                    kbd.press(mod_keymap[key])
+                    mod_key = mod_keymap[key]
+                    kbd.press(mod_key)
                     # don't release here so if we press this THEN a normal key later, it will still be pressed
                     
                 if keymap[key] is not None:
+                    print("KEY")
+                    keyToPress = keymap[key]
                     keypressed = True
+                    
+                    if mod_keypressed is True: # OK this isn't working because in the same LOOP of the keyboard... we process the key press before the mod because it is earlier in the layout.
+                                                # Need to cache all pressed keys until the end of the loop then press them.
+                        print("MOD KEY")
+                        if mod_key is Keycode.F24: # I am mapping this to the Fn Key as there isn't one in the Keycode library
+                            print("F24")
+                            keyToPress = ProcessFunctionKey(keymap[key])
+                    
                     # if there is a key pressed, check to see if there is a modifier pin pressed too
-                    kbd.press((keymap[key])) #press the (non-modifier) key
+                    kbd.press(keyToPress) #press the (non-modifier) key
                     kbd.release_all() #then release all keys pressed
                     time.sleep(0.3) #delay a bit so that we don't get a load of duplicate presses
 
